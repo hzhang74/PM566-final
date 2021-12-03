@@ -58,7 +58,7 @@ opts_chunk$set(
 ## Introduction
 Los Angeles is a very vibrant city with lots of neighborhoods. However, the crime issue is something that can not be ignored. The crime activities are frequent especially in neighborhoods near USC. In this study, we will be analyzing the arrest data in LA county from 2020 to present using the data provided by LA city database. 
 
-## Dataset Information
+## Methods
 The arrest data comes from the LA city database. It contains detailed information of each arrest record starting from 2020.<br>
 Report ID: ID for the arrest <br>
 Report Type: BOOKING = Person is booked at a detention facility RFC = Person is cited and Released From Custody (RFC)<br>
@@ -69,6 +69,7 @@ Sex: M=Male, F=Female <br>
 Charge/Charge Description: Reasons of arrest <br>
 Lat/Lon/Location: Locations where the arrest occurred <br>
 
+The unemployment dataset also comes from LA city database which contains the unemployment rate from 2000.
 ## Main Question
 How did arrest counts change during the COVID-19 era and if there is any association bewtween arrest counts and unemployment rate?
 
@@ -80,14 +81,18 @@ arrest20 <- read.csv("Arrest_Data_2020.csv")
 arrest21 <- read.csv("Arrest_Data_2021.csv")
 # using rbind to combine two datasets
 arrest<- rbind(arrest20,arrest21)
-
+```
+Modify date variables & adding month and year variables for further use 
+```{r}
 arrest$Arrest_Date<-strptime(arrest$Arrest_Date,format="%Y/%m/%d") 
 arrest$Arrest_Date<-as.Date(arrest$Arrest_Date,format="%m/%d/%Y")
 arrest$year <- year(arrest$Arrest_Date)
 arrest$month <- month(arrest$Arrest_Date)
 arrest$day <- day(arrest$Arrest_Date)
 arrest$Booking_Date<-as.Date(arrest$Booking_Date,"%m/%d/%Y")
-
+```
+Exclude arrests with unknown locations & those age<8
+```{r}
 arrest20<-arrest20[!(arrest20$LAT==0 | arrest20$LAT==0 | arrest20$Age<8),]
 arrest21<-arrest21[!(arrest21$LAT==0 | arrest21$LAT==0 | arrest21$Age<8),]
 arrest<-arrest[!(arrest$LAT==0 | arrest$LAT==0 | arrest$Age<8),]
@@ -100,7 +105,7 @@ daily_count_area<-as.data.table(daily_count_area)
 
 
 ```
-Partition a day into four categories.
+Partition a day into four categories
 ```{r}
 arrest$time_cat <- as.factor(ifelse(arrest$Time < 600, 'before_dawn',
                           ifelse(arrest$Time < 1200, 'morning', 
@@ -253,7 +258,6 @@ In this figure which we smooth the lineplot, the arrest counts decrease in the f
 
 ## Now we check if there is any correlation between arrest and unemployment.
 Wrangling data
-
 ```{r}
 # Daily arrests record table
 
@@ -300,7 +304,7 @@ unemp_arr[] %>%
   xlab("Unemployment Rate") + ylab("Monthly Average Arrest Count")+
   ggtitle("Relation between Unemployment Rate and Arrest COunt")
 ```
-Beyond expectation, the regression line shows a negative association between unemployment rate and arrest count. First, the unemployment rate was low while the arrest count was high before the pandemic, which can be seen on the left up corner of the graph. Then during the lockdown, the unemployment rate grew very high, but due to the lockdown and the lack of population flow after the lock down, the arrest count decreased, such plots can be seen on the right down corner of the graph. In all, the lock down and lack of population flow lead to a negative association. 
+Beyond expectation, the regression line shows a negative association between unemployment rate and arrest counts. First, the unemployment rate was low while the arrest count was high before the pandemic, which can be seen on the left up corner of the graph. Then during the lockdown, the unemployment rate grew very high, but due to the lockdown and the lack of population flow after the lock down, the arrest count decreased, such plots can be seen on the right down corner of the graph. In all, the lock down and lack of population flow lead to a negative association. 
 
 ## Conclusion
 Among the overall arrest record from 2020 to present, most arrests were recorded in the afternoon and evening, those in the afternoon were more likely to be released from custody, while those in the evening and before dawn are more likely to be booked into retention. Number of males that is arrested is much higher than the number of females. By age, People between 20-40 years old contributed the most record. By races, Hispanic, Black and White had the highest number of arrest record, maybe because of their large population base. The generalized location where each race got caught also differed, which makes sense as Koreans are more concentrated in K town. The overall arrest count was decreasing at the start of the pandemic, probably caused by the lockdown, with sudden bursts of arrests due to the BLM crime wave around June 2020. If we combine the arrest record with the unemployment rate, we can see that the arrest record decreased as the unemployment rate increased suprisingly. Maybe this is because of the lockdown not only caused unemployment, but also caused a large decrease of population flow. Few people on street maybe associate with less crime which finally lead to less arrest records.

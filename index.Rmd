@@ -70,7 +70,7 @@ Charge/Charge Description: Reasons of arrest <br>
 Lat/Lon/Location: Locations where the arrest occurred <br>
 
 ## Main Question
-How did arrest counts change during the COVID-19 era?
+How did arrest counts change during the COVID-19 era and if there is any association bewtween arrest counts and unemployment rate?
 
 ## Data Wrangling
 Combining and cleaning data
@@ -250,7 +250,7 @@ ggplot(tb, aes(x=Arrest_Date)) +
   xlab("Arrest Date")+ylab("Daily Arrest Record")+ggtitle("Daily Arrest lineplot")
 ```
 In this figure which we smooth the lineplot, the arrest counts decrease in the first several months of the pandemic but started to increase starting from this year.
-<br>
+
 ## Now we check if there is any correlation between arrest and unemployment.
 Wrangling data
 

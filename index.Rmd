@@ -251,11 +251,59 @@ ggplot(tb, aes(x=Arrest_Date)) +
 ```
 In this figure which we smooth the lineplot, the arrest counts decrease in the first several months of the pandemic but started to increase starting from this year.
 <br>
+## Now we check if there is any correlation between arrest and unemployment.
+Wrangling data
+
+```{r}
+# Daily arrest record table
+
+arrest_by_date<-arrest %>% 
+  group_by(Arrest_Date) %>% 
+  summarise(new_arrest = n())
+arrest_by_date<-as.data.frame(arrest_by_date)
+arrest_by_date<-transform(arrest_by_date,cummulation_arrest=cumsum(new_arrest))
 
 
+# Compute monthly average arrest record
+arrest_by_date$month<-month(arrest_by_date$Arrest_Date)
+arrest_by_date$year<-year(arrest_by_date$Arrest_Date)
+
+month_avg <- arrest_by_date %>%
+  group_by(month, year) %>%
+  summarise(Mean_arrest = mean(new_arrest) )
+month_avg<-month_avg %>%
+  mutate(date = make_date(year, month))
+
+unemp <- read.csv("CALOSA7URN.csv")
+unemp$DATE<-strptime(unemp$DATE,format="%Y/%m/%d")
+unemp$DATE<-as.Date(unemp$DATE,format="%m/%d/%Y")
+unemp$year <- year(unemp$DATE)
+unemp$month <- month(unemp$DATE)
+
+
+
+unemp20_21<-unemp %>% filter(
+  year>=2020
+  )
+
+unemp20_21 = subset(unemp20_21, select = -c(month,year) )
+unemp_arr<-merge(x=month_avg,y=unemp20_21, by.x="date",by.y="DATE",all.x=FALSE,all.y=TRUE)
+unemp_arr$year<-as.character(unemp_arr$year)
+
+ 
+# Plot of unemployment rate and mean arrest
+
+unemp_arr[] %>%
+  ggplot(mapping = aes(x = Unemployment_Rate, y = Mean_arrest, color = year, linetype = year)) +
+  geom_point() + 
+  geom_smooth(method = lm, se = FALSE)+
+  xlab("Unemployment Rate") + ylab("Monthly Average Arrest Count")+
+  ggtitle("Relation between Unemployment Rate and Arrest COunt")
+```
+Beyond expectation, the regression line shows a negative association between unemployment rate and arrest count. First, the unemployment rate was low while the arrest count was high before the pandemic, which can be seen on the left up corner of the graph. Then during the lockdown, the unemployment rate grew very high, but due to the lockdown and the lack of population flow after the lock down, the arrest count decreased, such plots can be seen on the right down corner of the graph. In all, the lock down and lack of population flow lead to a negative association. 
 
 ## Conclusion
-Among the overall arrest record from 2020 to present, most arrests were recorded in the afternoon and evening, those in the afternoon were more likely to be released from custody, while those in the evening and before dawn are more likely to be booked into retention. Number of males that is arrested is much higher than the number of females. By age, People between 20-40 years old contributed the most record. By races, Hispanic, Black and White had the highest number of arrest record, maybe because of their large population base. The generalized location where each race got caught also differed, which makes sense as Koreans are more concentrated in K town. The overall arrest count was decreasing at the start of the pandemic, probably caused by the lockdown, with sudden bursts of arrests due to the BLM crime wave around June 2020. 
+Among the overall arrest record from 2020 to present, most arrests were recorded in the afternoon and evening, those in the afternoon were more likely to be released from custody, while those in the evening and before dawn are more likely to be booked into retention. Number of males that is arrested is much higher than the number of females. By age, People between 20-40 years old contributed the most record. By races, Hispanic, Black and White had the highest number of arrest record, maybe because of their large population base. The generalized location where each race got caught also differed, which makes sense as Koreans are more concentrated in K town. The overall arrest count was decreasing at the start of the pandemic, probably caused by the lockdown, with sudden bursts of arrests due to the BLM crime wave around June 2020. If we combine the arrest record with the unemployment rate, we can see that the arrest record decreased as the unemployment rate increased suprisingly. Maybe this is because of the lockdown not only caused unemployment, but also caused a large decrease of population flow. Few people on street maybe associate with less crime which finally lead to less arrest records.
 
 
 

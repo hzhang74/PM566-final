@@ -1,6 +1,6 @@
 ---
 title: "PM566 Final Project"
-author: "Your Name"
+author: "Haoran Zhang"
 output: 
     html_document:
         toc: TRUE
@@ -23,6 +23,10 @@ library(dplyr)
 library(plotly)
 library(DT)
 library(knitr)
+library(readr)
+library(skimr)
+library(lubridate)
+library(leaflet)
 
 # Initialize code chunk options
 opts_chunk$set(
@@ -50,73 +54,229 @@ opts_chunk$set(
 
 <br>
 
-## First step
 
-First I will source any necessary code, e.g. `process_covid_data.R`:
+## Introduction
+Los Angeles is a very vibrant city with lots of neighborhoods. However, the crime issue is something that can not be ignored. The crime activities are frequent especially in neighborhoods near USC. In this study, we will be analyzing the arrest data in LA county from 2020 to present using the data provided by LA city database. 
 
-```{r load-data}
-source("process_COVID_data.R")
+## Dataset Information
+The arrest data comes from the LA city database. It contains detailed information of each arrest record starting from 2020.
+Report ID: ID for the arrest.
+Report Type: BOOKING = Person is booked at a detention facility RFC = Person is cited and Released From Custody (RFC)
+Arrest time: Correcting to minutes
+Area ID/Name: The LAPD has 21 Community Police Stations referred to as Geographic Areas within the department. 
+Age: in years
+Sex: M=Male, F=Female
+Charge/Charge Description: Reasons of arrest
+Lat/Lon/Location: Locations where the arrest occurred 
+
+## Main Question
+How did arrest counts change during the COVID-19 era?
+
+```{r}
+# Read CSV files
+arrest20 <- read.csv("Arrest_Data_2020.csv")
+arrest21 <- read.csv("Arrest_Data_2021.csv")
+# using rbind to combine two datasets
+arrest<- rbind(arrest20,arrest21)
+
+arrest$Arrest_Date<-strptime(arrest$Arrest_Date,format="%Y/%m/%d") 
+arrest$Arrest_Date<-as.Date(arrest$Arrest_Date,format="%m/%d/%Y")
+arrest$year <- year(arrest$Arrest_Date)
+arrest$month <- month(arrest$Arrest_Date)
+arrest$day <- day(arrest$Arrest_Date)
+arrest$Booking_Date<-as.Date(arrest$Booking_Date,"%m/%d/%Y")
+
+arrest20<-arrest20[!(arrest20$LAT==0 | arrest20$LAT==0 | arrest20$Age<8),]
+arrest21<-arrest21[!(arrest21$LAT==0 | arrest21$LAT==0 | arrest21$Age<8),]
+arrest<-arrest[!(arrest$LAT==0 | arrest$LAT==0 | arrest$Age<8),]
+
+daily_count_area<-arrest %>% 
+  group_by(Arrest_Date,Area_Name) %>% 
+  summarise(total_arrest = n()
+            )
+daily_count_area<-as.data.table(daily_count_area)
+
+
 ```
 
+```{r}
+arrest$time_cat <- as.factor(ifelse(arrest$Time < 600, 'before_dawn',
+                          ifelse(arrest$Time < 1200, 'morning', 
+                          ifelse(arrest$Time < 1800, 'afternoon', "evening"))))
+```
+
+```{r}
+booking<-c(nrow(arrest[arrest$Report_Type == "BOOKING" & arrest$time_cat=="morning",]),nrow(arrest[arrest$Report_Type == "BOOKING" & arrest$time_cat=="afternoon",]),nrow(arrest[arrest$Report_Type == "BOOKING" & arrest$time_cat=="evening",]),nrow(arrest[arrest$Report_Type == "BOOKING" & arrest$time_cat=="before_dawn",]))
+RFC<-c(nrow(arrest[arrest$Report_Type == "RFC" & arrest$time_cat=="morning",]),nrow(arrest[arrest$Report_Type == "RFC" & arrest$time_cat=="afternoon",]),nrow(arrest[arrest$Report_Type == "RFC" & arrest$time_cat=="evening",]),nrow(arrest[arrest$Report_Type == "RFC" & arrest$time_cat=="before_dawn",]))
+time_cat<-c("morning","afternoon","evening","before_dawn")
+type_time<-data.frame(time_cat,booking,RFC)
+
+type_time_fig <- plot_ly(type_time, x = ~time_cat, y = ~booking, type = 'bar', name = 'BOOKING')
+type_time_fig <- type_time_fig %>% add_trace(y = ~RFC, name = 'RFC')
+type_time_fig <- type_time_fig %>% layout(yaxis = list(title = 'Count'), barmode = 'Arrest Type') %>%
+   layout(title = "Types of Arrest by Time Category",
+         xaxis = list(title = "Time Category",
+                      zeroline = FALSE),
+         yaxis = list(title = "Count",
+                      zeroline = FALSE))
+
+type_time_fig
+```
+This graph depicts a  barchart of time of arrest by type of arrest. Time of arrest is categorized by partitioning a whole day into 4 categories with equal length starting from midnight. There are two arrest types, booking means the person is booked at a detention facility and RFC means the person is released from custody. From this figure, we can see that despite the number of arrest is the least in the before dawn time category, the ratio of booking comparing to RFC is the largest, indicating that persons are more likely to be booked at a detention facility for arrests occur at night, while persons have higher probability to be released if arrests occur in the day. 
+
+```{r}
+Arr <- plot_ly(y = ~total_arrest, type = "box", data = daily_count_area, color = ~Area_Name) %>%
+  layout(title = "Arrest by Area",
+         xaxis = list(title = "Area",
+                      zeroline = FALSE),
+         yaxis = list(title = "Arrest",
+                      zeroline = FALSE))
+
+Arr
+```
+The LAPD has 21 Community Police Stations referred to as Geographic Areas within the department. This figure shows the boxplot of daily arrest 
+group by the 21 police stations. From the figure we can see that 77th street has the most number of reported cases followed by Central division. 
+```{r}
+library(geojsonio)
+la <- geojson_read("LAPD_Divisions.geojson",  what = "sp")
+library(sp)
+par(mar=c(0,0,0,0))
+plot(la, col="grey")
+```
+The map of 21 LAPD regions which I'll make a choropleth map.
+
+```{r}
+library(RSQLite)
+library(DBI)
+
+# Initialize a temporary in memory database
+con <- dbConnect(SQLite(), ":memory:")
+
+# Copy data.frames to database
+dbWriteTable(con, "arrest", arrest)
+dbWriteTable(con, "daily_count_area", daily_count_area)
+```
+
+```{r}
+la_avg<-dbGetQuery(con, "select Area_Name, avg(total_arrest) as avg_count from daily_count_area group by Area_Name")
+daily_avg<-dbGetQuery(con, "select Arrest_Date, avg(total_arrest) as avg_count from daily_count_area group by Arrest_Date")
+dbWriteTable(con, "la_avg", la_avg)
+dbWriteTable(con, "daily_avg", daily_avg)
+```
+```{r}
+dbDisconnect(con)
+```
+
+
+## Preliminary Results
+```{r}
+plot_ly(daily_avg, x = ~Arrest_Date, y = ~avg_count, type = 'scatter', mode = 'lines')
+```
+This graph shows the scatter plot of arrest counts along timeline starting from 2020. Noticing the sudden increase of arrests around late June 2020. <br>
+Claim: This was caused by the BLM effect.
+
+```{r}
+daily_count_race<-arrest %>% 
+  group_by(Arrest_Date,Descent_Code) %>% 
+  summarise(total_arrest = n()
+            )
+daily_count_race<-as.data.table(daily_count_race)
+
+Arr_Race <- plot_ly(y = ~total_arrest, type = "box", data = daily_count_race, color = ~Descent_Code) %>%
+  layout(title = "Arrest by Race",
+         xaxis = list(title = "Race", xaxis = list(title = 'X Axis Title'),
+                      zeroline = FALSE),
+         yaxis = list(title = "Daily Arrest",
+                      zeroline = FALSE))
+Arr_Race
+```
+The figure depicts the boxplot of arrest counts by races. In this graph, we can observe that Hispanic, Black and White appears to have the three highest arrest record. We will pick these three races as our sample.
+
+```{r}
+arrest_BHW<-arrest[arrest$Descent_Code=="B"|arrest$Descent_Code=="H"|arrest$Descent_Code=="W",]
+tb_BHW<-dcast(setDT(arrest[arrest$Descent_Code=="B" | arrest$Descent_Code=="H"| arrest$Descent_Code=="W",]), Arrest_Date~Descent_Code, value.var = "Arrest_Date",length)[]
+
+tb_BHW_my<-tb_BHW
+tb_BHW_my$month<-month(tb_BHW$Arrest_Date)
+tb_BHW_my$year<-year(tb_BHW$Arrest_Date)
+
+dt_BHW_my <- tb_BHW_my %>%
+  group_by(month, year) %>%
+  summarise(Mean_arrest_Black = mean(B),
+            Mean_arrest_Hispanic = mean(H),
+            Mean_arrest_White = mean(W)
+            )
+dt_BHW_my<-dt_BHW_my %>%
+  mutate(date = make_date(year, month))
+dt_BHW_my<-as.data.table(dt_BHW_my)
+dt_BHW_my = subset(dt_BHW_my,select = -c(date))
+
+ggplot(tb_BHW, aes(x=Arrest_Date)) + 
+  geom_line(aes(y = H), color = "darkgreen") + 
+  geom_line(aes(y = B), color="steelblue") +
+  geom_line(aes(y = W), color="red")+
+  xlab("Arrest Date")+ylab("Daily Arrest Record")+ggtitle("Daily Arrest lineplot")
+```
+This figure shows the lineplot of arrest counts of Hispanic, Black and White. We can see that the arrest records of Hispanic and Black did increase significantly around June 2020 while that of the Whites decreased. This supports our claim that the sudden increase of arrest counts was due to the BLM crime wave. 
+
+```{r}
+tb<-dcast(setDT(arrest), Arrest_Date~Descent_Code, value.var = "Arrest_Date",length)[]
+
+tb_my<-tb
+tb_my$month<-month(tb$Arrest_Date)
+tb_my$year<-year(tb$Arrest_Date)
+
+arrest %>% 
+  group_by_if(is.numeric %>% Negate) %>%
+  summarize_all(sum)
+
+dt_my <- tb_my %>%
+  group_by(month, year) %>%
+  summarise(Mean_arrest_Black = mean(B),
+            Mean_arrest_Hispanic = mean(H),
+            Mean_arrest_White = mean(W)
+            )
+dt_my<-dt_my %>%
+  mutate(date = make_date(year, month))
+dt_my<-as.data.table(dt_my)
+dt_my = subset(dt_my,select = -c(date))
+
+ggplot(tb, aes(x=Arrest_Date)) + 
+  geom_smooth(aes(y = H), color = "darkgreen") + 
+  geom_smooth(aes(y = B), color="steelblue") +
+  geom_smooth(aes(y = W), color="red")+
+  xlab("Arrest Date")+ylab("Daily Arrest Record")+ggtitle("Daily Arrest lineplot")
+```
+As a whole, the arrest counts decreases in the first several months of the pandemic but started to increase starting from this year.
 <br>
 
-## Second step
-
-Then I will add some code to create the **plotly** figures
-
-Note: You need to name each code chunk, like this one: `plot1`
-
-```{r plot1, class.source="code-r-small"}
-
-p1_scatter <- cv_states_today %>% 
-  plot_ly(x = ~pop_density, y = ~deathsper100k,
-          type = 'scatter', mode = 'markers', color = ~state,
-          size = ~population, sizes = c(5, 70), marker = list(sizemode='diameter', opacity=0.5),
-          hoverinfo = 'text',
-          text = ~paste( paste(state, ":", sep=""), paste(" Cases per 100k: ", per100k, sep="") , paste(" Deaths per 100k: ",
-                        deathsper100k, sep=""), sep = "<br>")) %>%
-  layout(title = "Population-normalized COVID-19 deaths vs. population density",
-                  yaxis = list(title = "Deaths per 100k"), xaxis = list(title = "Population Density"),
-         hovermode = "compare")
-
-# filter out "District of Columbia"
-cv_states_today_scatter <- cv_states_today %>% filter(state!="District of Columbia")
-
-p2_scatter <- cv_states_today_scatter %>% 
-  plot_ly(x = ~pop_density, y = ~deathsper100k,
-          type = 'scatter', mode = 'markers', color = ~state,
-          size = ~population, sizes = c(5, 70), marker = list(sizemode='diameter', opacity=0.5),
-          hoverinfo = 'text',
-          text = ~paste( paste(state, ":", sep=""), paste(" Cases per 100k: ", per100k, sep="") , paste(" Deaths per 100k: ",
-                        deathsper100k, sep=""), sep = "<br>")) %>%
-  layout(title = "Population-normalized COVID-19 deaths vs. population density",
-                  yaxis = list(title = "Deaths per 100k"), xaxis = list(title = "Population Density"),
-         hovermode = "compare")
+Now we check if the arrests of different races are clustered or randomly distributed by looking at arrests of Asians.
+```{r}
+arr_CJK<-arrest[arrest$Descent_Code=="C" | arrest$Descent_Code=="J"| arrest$Descent_Code=="K"|arrest$Descent_Code=="A",]
+pal <- colorFactor(c("red","blue","green","yellow"), domain = arr_CJK$Descent_Code)
+leaflet() %>% 
+  addProviderTiles('CartoDB.Positron') %>% 
+  addCircles(
+    data = arr_CJK,
+    lat = ~LAT, lng = ~LON, 
+    opacity = 1, fillOpacity = 1, radius = 40, color = ~pal(arr_CJK$Descent_Code)
+    ) %>%
+  addLegend('bottomleft', pal=pal, values=arr_CJK$Descent_Code,
+          title='Race', opacity=1)
 ```
-
+In this figure, we can see that arrests of Koreans are clustered around K town, Chinese are clustered aroung K town and Northwest while other Asians are kind of randomly distributed.
 <br>
 
-## Third step {.tabset}
+## Conclusion
+Among the overall arrest record from 2020 to present, most arrests were recorded in the afternoon and evening, those in the afternoon are more likely to be released from custody, while those in the evening and before dawn are more likely to be booked into retention. Number of males that is arrested is much higher than the number of females. By age, People between 20-40 years old contributed the most record. By races, Hispanic, Black and White had the highest number of arrest record, maybe because of their large population base. The generalized location where each race got caught also differed, which makes sense as Koreans are more concentrated in K town. The overall arrest count was decreasing at the start of the pandemic, probably caused by the lockdown, with sudden bursts of arrests due to the BLM crime wave around June 2020. 
 
-Create tabs to display each figure
 
-### Scatterplot: with DC
 
-```{r p1}
-p1_scatter
-```
 
-### Scatterplot: without DC
 
-```{r p2}
-p2_scatter
-```
 
-## {-}
 
-<br>
 
-Done!
 
 <br>
 <br>

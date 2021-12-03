@@ -255,7 +255,7 @@ In this figure which we smooth the lineplot, the arrest counts decrease in the f
 Wrangling data
 
 ```{r}
-# Daily arrest record table
+# Daily arrests record table
 
 arrest_by_date<-arrest %>% 
   group_by(Arrest_Date) %>% 

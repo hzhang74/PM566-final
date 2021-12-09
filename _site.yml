@@ -4,6 +4,8 @@ navbar:
   title: "PM566 Final Project"
   left:
     - text: "Home"
+      href: Home.html
+    - text: "Final Additional Data"
       href: index.html
     - text: "Lab 12"
       href: 12-lab.html

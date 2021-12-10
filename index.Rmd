@@ -9,7 +9,7 @@ output:
 
 <br>
 
-This is my PM566 Final Project website. I will showcase a few interactive visuals here.
+This is the additional data of my PM566 Final Project. The formal report is in the homepage of this website.
 
 (Your output should look something like this)
 
@@ -106,11 +106,16 @@ daily_count_area<-as.data.table(daily_count_area)
 
 
 ```
-Partition a day into four categories
+Time Cat & Age Cat
 ```{r}
 arrest$time_cat <- as.factor(ifelse(arrest$Time < 600, 'before_dawn',
                           ifelse(arrest$Time < 1200, 'morning', 
                           ifelse(arrest$Time < 1800, 'afternoon', "evening"))))
+arrest$age_cat <- as.factor(ifelse(arrest$Age < 20, '<20',
+                          ifelse(arrest$Age < 30, '20-30',
+                          ifelse(arrest$Age < 40, '30-40',
+                          ifelse(arrest$Age < 50, '40-50',
+                                 ">50")))))
 ```
 ## Plotting
 ```{r}
@@ -131,6 +136,33 @@ type_time_fig <- type_time_fig %>% layout(yaxis = list(title = 'Count'), barmode
 type_time_fig
 ```
 This graph depicts a  barchart of time of arrest by type of arrest. Time of arrest is categorized by partitioning a whole day into 4 categories with equal length starting from midnight. There are two arrest types, booking means the person is booked at a detention facility and RFC means the person is released from custody. From this figure, we can see that despite the number of arrest is the least in the before dawn time category, the ratio of booking comparing to RFC is the largest, indicating that persons are more likely to be booked at a detention facility for arrests occur at night, while persons have higher probability to be released if arrests occur in the day. 
+```{r warning=FALSE}
+arrest[] %>%
+  ggplot() + 
+  geom_bar(mapping = aes(x = age_cat, fill = Sex_Code), position = "dodge")+
+  xlab("Age") + ylab("Arrest Count")+
+  ggtitle("Barchart of Age Category by Sex")
+```
+Male's arrest record is much higher than female's, while both appear to be normal distributed, with age 20-30 the most frequently arrested while male a little left-skewed.
+
+Basic summary of the data
+```{r}
+arrest_by_area<-arrest %>% 
+  group_by(Area_Name,Arrest_Date) %>% 
+  dplyr::summarise(new_arrest = n())
+arrest_by_area<-as.data.frame(arrest_by_area)
+arrest_by_area<-transform(arrest_by_area,cummulation_arrest=cumsum(new_arrest))
+
+dist_tb <- arrest_by_area %>%
+  group_by(Area_Name) %>%
+  dplyr::summarise(Mean_arrest = mean(new_arrest),
+                   Max_arrest = max(new_arrest),
+                   Min_arrest = min(new_arrest),
+                   std_arrest = sd(new_arrest),
+                   )
+knitr::kable(dist_tb)
+```
+
 
 ```{r}
 Arr <- plot_ly(y = ~total_arrest, type = "box", data = daily_count_area, color = ~Area_Name) %>%
@@ -250,6 +282,7 @@ Arr_Race <- plot_ly(y = ~total_arrest, type = "box", data = daily_count_race, co
                       zeroline = FALSE))
 Arr_Race
 ```
+
 The figure depicts the boxplot of arrest counts by races. In this graph, we can observe that Hispanic, Black and White appears to have the three highest arrest record. We will pick these three races as our sample.
 
 ```{r}

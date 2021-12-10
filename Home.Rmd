@@ -9,10 +9,6 @@ output:
 
 <br>
 
-This is my PM566 Final Project website. I will showcase a few interactive visuals here.
-
-<br>
-
 ```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
 
 library(data.table)

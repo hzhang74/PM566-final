@@ -1,1 +1,3 @@
-This is my PM566 Final Project, which is about the arrest records in the COVID-19 era. The arrest data was acquired from LA City Database. I will analyze some basic characteristics of the arrest data and combine the data with the unemployment rate data to find out if there is any association between unemployment rate and arrest count since 2020. The website is online at https://hzhang74.github.io/PM566-final/.
+This is my PM566 Final Project, which is about the arrest records in the COVID-19 era. The arrest data was acquired from LA City Database. I will analyze some basic characteristics of the arrest data and combine the data with the unemployment rate data to find out if there is any association between unemployment rate and arrest count since 2020. <br>
+The website is online at https://hzhang74.github.io/PM566-final/.<br>
+The pdf of final report can be found at https://github.com/hzhang74/PM566-final/blob/main/FinalReport.pdf in this repo.

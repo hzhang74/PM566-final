@@ -6,7 +6,7 @@ output:
         toc: TRUE
         toc_float: TRUE
 ---
-
+This is my final report website. The additional data is provided in the Additional Data page and the pdf is also contained in this repository.
 <br>
 
 ```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
@@ -73,8 +73,8 @@ How did arrest counts change during the COVID-19 era and if there is any associa
 We first merge the arrest data of 2020 and 2021 together in order to get an overall dataframe containing the arrest data since 2020. Then we modify the date variable by adding month and year variables for calculating monthly average data. We further exclude those arrest records with unknown location(both latitude and longitude equal 0) and those that are unlikely(age<8). Also we create a time category which partitions a day into four categories with equal length. 
 ```{r, echo=FALSE}
 # Read CSV files
-arrest20 <- read.csv("Arrest_Data_2020.csv")
-arrest21 <- read.csv("Arrest_Data_2021.csv")
+arrest20 <- read.csv("DATA/Arrest_Data_2020.csv")
+arrest21 <- read.csv("DATA/Arrest_Data_2021.csv")
 # using rbind to combine two datasets
 arrest<- rbind(arrest20,arrest21)
 ```
@@ -238,7 +238,7 @@ month_avg <- arrest_by_date %>%
 month_avg<-month_avg %>%
   mutate(date = make_date(year, month))
 
-unemp <- read.csv("CALOSA7URN.csv")
+unemp <- read.csv("DATA/CALOSA7URN.csv")
 unemp$DATE<-strptime(unemp$DATE,format="%Y/%m/%d")
 unemp$DATE<-as.Date(unemp$DATE,format="%m/%d/%Y")
 unemp$year <- year(unemp$DATE)
@@ -268,4 +268,4 @@ unemp_arr[] %>%
 Beyond expectation, the regression line shows a negative association between unemployment rate and arrest counts. First, the unemployment rate was low while the arrest count was high before the pandemic, which can be seen on the left up corner of the graph. Then during the lockdown, the unemployment rate grew very high, but due to the lockdown and the lack of population flow after the lock down, the arrest count decreased, such plots can be seen on the right down corner of the graph. In all, the lock down and lack of population flow lead to a negative association. 
 
 # **Conclusion**
-Among the overall arrest record from 2020 to present, most arrests were recorded in the afternoon and evening, those in the afternoon were more likely to be released from custody, while those in the evening and before dawn are more likely to be booked into retention. Number of males that is arrested is much higher than the number of females. By age, People between 20-40 years old contributed the most record. By races, Hispanic, Black and White had the highest number of arrest record, maybe because of their large population base. The generalized location where each race got caught also differed, which makes sense as Koreans are more concentrated in K town. The overall arrest count was decreasing at the start of the pandemic, probably caused by the lockdown, with sudden bursts of arrests due to the BLM crime wave around June 2020. If we combine the arrest record with the unemployment rate, we can see that the arrest record decreased as the unemployment rate increased suprisingly. Maybe this is because of the lockdown not only caused unemployment, but also caused a large decrease of population flow. Few people on street maybe associate with less crime which finally lead to less arrest records.
+Among the overall arrest record from 2020 to present, most arrests were recorded in the afternoon and evening, those in the afternoon were more likely to be released from custody, while those in the evening and before dawn are more likely to be booked into retention. Number of males that is arrested is much higher than the number of females. By age, males between 20-40 years old contribute the most record. 77th Street District has the largest arrest counts follow by Pacific and Central. By races, Hispanic, Black, and White had the highest number of arrest record, maybe because of their large population base. The overall arrest count was decreasing at the start of the pandemic, probably caused by the lockdown, with sudden bursts of arrests due to the BLM crime wave around June 2020. If we combine the arrest record with the unemployment rate, we can see that the arrest record decreased as the unemployment rate increased surprisingly. Maybe this is because of the lockdown not only caused unemployment, but also caused a large decrease of population flow. Few people on street maybe associate with less crime which finally lead to less arrest records.

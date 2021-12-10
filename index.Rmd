@@ -79,8 +79,8 @@ How did arrest counts change during the COVID-19 era and if there is any associa
 Combining and cleaning data
 ```{r }
 # Read CSV files
-arrest20 <- read.csv("Arrest_Data_2020.csv")
-arrest21 <- read.csv("Arrest_Data_2021.csv")
+arrest20 <- read.csv("DATA/Arrest_Data_2020.csv")
+arrest21 <- read.csv("DATA/Arrest_Data_2021.csv")
 # using rbind to combine two datasets
 arrest<- rbind(arrest20,arrest21)
 ```
@@ -136,16 +136,9 @@ type_time_fig <- type_time_fig %>% layout(yaxis = list(title = 'Count'), barmode
 type_time_fig
 ```
 This graph depicts a  barchart of time of arrest by type of arrest. Time of arrest is categorized by partitioning a whole day into 4 categories with equal length starting from midnight. There are two arrest types, booking means the person is booked at a detention facility and RFC means the person is released from custody. From this figure, we can see that despite the number of arrest is the least in the before dawn time category, the ratio of booking comparing to RFC is the largest, indicating that persons are more likely to be booked at a detention facility for arrests occur at night, while persons have higher probability to be released if arrests occur in the day. 
-```{r warning=FALSE}
-arrest[] %>%
-  ggplot() + 
-  geom_bar(mapping = aes(x = age_cat, fill = Sex_Code), position = "dodge")+
-  xlab("Age") + ylab("Arrest Count")+
-  ggtitle("Barchart of Age Category by Sex")
-```
-Male's arrest record is much higher than female's, while both appear to be normal distributed, with age 20-30 the most frequently arrested while male a little left-skewed.
 
-Basic summary of the data
+
+### Basic summary of the data
 ```{r}
 arrest_by_area<-arrest %>% 
   group_by(Area_Name,Arrest_Date) %>% 
@@ -349,7 +342,7 @@ ggplot(tb, aes(x=Arrest_Date)) +
 ```
 In this figure which we smooth the lineplot, the arrest counts decrease in the first several months of the pandemic but started to increase starting from this year.
 
-## 
+## Unemployment
 Wrangling data
 ```{r}
 # Daily arrests record table
@@ -371,7 +364,7 @@ month_avg <- arrest_by_date %>%
 month_avg<-month_avg %>%
   mutate(date = make_date(year, month))
 
-unemp <- read.csv("CALOSA7URN.csv")
+unemp <- read.csv("DATA/CALOSA7URN.csv")
 unemp$DATE<-strptime(unemp$DATE,format="%Y/%m/%d")
 unemp$DATE<-as.Date(unemp$DATE,format="%m/%d/%Y")
 unemp$year <- year(unemp$DATE)
